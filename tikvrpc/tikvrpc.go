@@ -201,6 +201,11 @@ func (t CmdType) String() string {
 	return "Unknown"
 }
 
+type ResponseFromLocalChannel struct {
+	Resp *Response
+	Err  error
+}
+
 // Request wraps all kv/coprocessor requests.
 type Request struct {
 	Type CmdType
@@ -217,6 +222,10 @@ type Request struct {
 	// If it's not empty, the store which receive the request will forward it to
 	// the forwarded host. It's useful when network partition occurs.
 	ForwardedHost string
+	//for batch request, to be compatible with old behaviors,
+	//old rpc style remains unchanged to ensure env is identical to old one
+	ResponseViaLocalChannel bool
+	LocalCh                 chan *ResponseFromLocalChannel
 }
 
 // NewRequest returns new kv rpc request.

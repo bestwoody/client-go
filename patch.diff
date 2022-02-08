@@ -1,0 +1,42 @@
+diff --git a/internal/client/client.go b/internal/client/client.go
+index fb5eb2b..86547eb 100644
+--- a/internal/client/client.go
++++ b/internal/client/client.go
+@@ -436,6 +436,10 @@ func (c *RPCClient) SendRequest(ctx context.Context, addr string, req *tikvrpc.R
+ 	// Or else it's a unary call.
+ 	ctx1, cancel := context.WithTimeout(ctx, timeout)
+ 	defer cancel()
++	if tikvrpc.CmdMPPTask == req.Type && req.ResponseViaLocalChannel {
++		ret := <-req.LocalCh
++		return ret.Resp, ret.Err
++	}
+ 	return tikvrpc.CallRPC(ctx1, client, req)
+ }
+ 
+diff --git a/tikvrpc/tikvrpc.go b/tikvrpc/tikvrpc.go
+index 8ef8214..5940ffe 100644
+--- a/tikvrpc/tikvrpc.go
++++ b/tikvrpc/tikvrpc.go
+@@ -201,6 +201,11 @@ func (t CmdType) String() string {
+ 	return "Unknown"
+ }
+ 
++type ResponseFromLocalChannel struct {
++	Resp *Response
++	Err  error
++}
++
+ // Request wraps all kv/coprocessor requests.
+ type Request struct {
+ 	Type CmdType
+@@ -217,6 +222,10 @@ type Request struct {
+ 	// If it's not empty, the store which receive the request will forward it to
+ 	// the forwarded host. It's useful when network partition occurs.
+ 	ForwardedHost string
++	//for batch request, to be compatible with old behaviors,
++	//old rpc style remains unchanged to ensure env is identical to old one
++	ResponseViaLocalChannel bool
++	LocalCh                 chan *ResponseFromLocalChannel
+ }
+ 
+ // NewRequest returns new kv rpc request.

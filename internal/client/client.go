@@ -436,6 +436,10 @@ func (c *RPCClient) SendRequest(ctx context.Context, addr string, req *tikvrpc.R
 	// Or else it's a unary call.
 	ctx1, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	if tikvrpc.CmdMPPTask == req.Type && req.ResponseViaLocalChannel {
+		ret := <-req.LocalCh
+		return ret.Resp, ret.Err
+	}
 	return tikvrpc.CallRPC(ctx1, client, req)
 }
 
